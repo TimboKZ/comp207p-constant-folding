@@ -1,5 +1,11 @@
 *.class
 
+# Federica's files
+*DS_Store
+*MACOSX
+/.idea
+
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
