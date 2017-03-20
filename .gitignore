@@ -1,5 +1,8 @@
 *.class
 
+# Vim
+*.swp
+
 # Federica's files
 *DS_Store
 *MACOSX

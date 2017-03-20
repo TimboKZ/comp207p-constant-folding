@@ -29,7 +29,7 @@ public class ConstantFolder
 
 	public ConstantFolder(String classFilePath)
 	{
-		try{
+		try {
 			this.parser = new ClassParser(classFilePath);
 			this.original = this.parser.parse();
 			this.gen = new ClassGen(this.original);
@@ -43,11 +43,28 @@ public class ConstantFolder
 		ClassGen cgen = new ClassGen(original);
 		ConstantPoolGen cpgen = cgen.getConstantPool();
 
+        Method[] methods = cgen.getMethods();
+        for (Method m : methods) {
+            this.optimiseMethod(cgen, m);
+        }
+
 		// Implement your optimization here
+        //
+        // TODO: Simple constant folding
+        //      TODO: Check if statement only consists of simple constants
+        //
+        // TODO: Constant propogation
+        //
+        // TODO: 
         
 		this.optimized = gen.getJavaClass();
 	}
 
+    public void optimiseMethod(ClassGen classGen, Method method) {
+
+        InstructionList instructionList = new InstructionList(method.getCode().getCode());
+        System.out.println(instructionList);
+    }
 	
 	public void write(String optimisedFilePath)
 	{
