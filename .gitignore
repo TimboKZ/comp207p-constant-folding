@@ -1,5 +1,7 @@
-# Build folder
+# Build and temp tests folders
 /build/
+/optimised/
+/test-reports/
 
 *.class
 
@@ -17,6 +19,7 @@
 
 # Package Files #
 *.jar
+!/lib/*.jar
 *.war
 *.ear
 
