@@ -31,27 +31,19 @@ public class ConstantFolder {
     }
 
     public void optimize() {
-        ClassGen cgen = new ClassGen(original);
-        ConstantPoolGen cpgen = cgen.getConstantPool();
+        ClassGen classGen = new ClassGen(original);
+        ConstantPoolGen constantPoolGen = classGen.getConstantPool();
+        SimpleFolder simpleFolder = new SimpleFolder(classGen, constantPoolGen);
 
-        Method[] methods = cgen.getMethods();
-        Method[] newMethods = new Method[methods.length];
-        int i = 0;
-        for (Method m : methods) {
-            newMethods[i] = this.optimiseMethod(cgen, cpgen, m);
-            i++;
+        Method[] methods = classGen.getMethods();
+        int methodCount = methods.length;
+        Method[] newMethods = new Method[methodCount];
+        for (int i = 0; i < methodCount; i++) {
+            newMethods[i] = simpleFolder.optimiseMethod(methods[i]);
         }
 
-        // Implement your optimization here
-        //
-        // TODO: Simple constant folding
-        //      TODO: Check if statement only consists of simple constants
-        //
-        // TODO: Constant propagation
-        //
-        // TODO:
         gen.setMethods(newMethods);
-        gen.setConstantPool(cpgen);
+        gen.setConstantPool(constantPoolGen);
         this.optimized = gen.getJavaClass();
     }
 
