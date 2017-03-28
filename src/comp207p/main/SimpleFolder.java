@@ -6,21 +6,18 @@ import org.apache.bcel.generic.*;
 /**
  * @author Timur Kuzhagaliyev
  */
-public class SimpleFolder {
-
-    private ClassGen classGen;
-    private ConstantPoolGen constPoolGen;
+public class SimpleFolder extends Optimiser {
 
     public SimpleFolder(ClassGen classGen, ConstantPoolGen constPoolGen) {
-        this.classGen = classGen;
-        this.constPoolGen = constPoolGen;
+        super(classGen, constPoolGen);
     }
 
-    public Method optimiseMethod(Method method) {
+    protected Method optimiseMethod(
+            Method method,
+            MethodGen methodGen,
+            InstructionList list
+    ) {
         if (method.getName().equals("simple")) Util.debug = true;
-
-        MethodGen methodGen = new MethodGen(method, this.classGen.getClassName(), this.constPoolGen);
-        InstructionList list = methodGen.getInstructionList();
         int[] positions = list.getInstructionPositions();
         for (int index = 0; index < positions.length; index++) {
             int pos = positions[index];
@@ -32,7 +29,7 @@ public class SimpleFolder {
             if this will work but in theory it should make the check below
             unnecessary.
              */
-            if(handle == null) continue;
+            if (handle == null) continue;
             Instruction instruction = list.findHandle(pos).getInstruction();
             if (instruction instanceof ArithmeticInstruction) {
                 this.handleArithmeticInstruction(index, positions, list);
