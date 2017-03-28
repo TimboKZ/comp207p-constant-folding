@@ -20,7 +20,6 @@ public abstract class Optimiser {
     }
 
     public Method optimiseMethod(Method method) {
-        System.out.println(method.getName());
         MethodGen methodGen = new MethodGen(method, this.classGen.getClassName(), this.constPoolGen);
         InstructionList list = methodGen.getInstructionList();
         if (list == null) return method;

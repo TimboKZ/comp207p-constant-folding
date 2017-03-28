@@ -17,7 +17,6 @@ public class SimpleFolder extends Optimiser {
             MethodGen methodGen,
             InstructionList list
     ) {
-        if (method.getName().equals("simple")) Util.debug = true;
         int[] positions = list.getInstructionPositions();
         for (int index = 0; index < positions.length; index++) {
             int pos = positions[index];
@@ -35,8 +34,6 @@ public class SimpleFolder extends Optimiser {
                 this.handleArithmeticInstruction(index, positions, list);
             }
         }
-
-        Util.debug = false;
         return methodGen.getMethod();
     }
 
@@ -54,6 +51,9 @@ public class SimpleFolder extends Optimiser {
         Number number1 = Util.extractConstant(handle1, constPoolGen);
         Number number2 = Util.extractConstant(handle2, constPoolGen);
         if (number1 == null || number2 == null) return false;
+        // TODO: Delete constants from the pool once they are not used anymore?
+        // TODO: Checking pool size revealed they are not deleted immediately,
+        // TODO: but maybe this is done during bytecode generation phase?
 
         ArithmeticOperationType operationType = Util.extractArithmeticOperationType(instruction);
         int constIndex = this.performArithmeticOperation(operationType, type, number1, number2);

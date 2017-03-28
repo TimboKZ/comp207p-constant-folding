@@ -21,7 +21,10 @@ public class ConstantPropagator extends Optimiser {
             MethodGen methodGen,
             InstructionList list
     ) {
-
+        if(this.classGen.getClassName().contains("ConstantVariableFolding")
+                && method.getName().equals("methodOne")) Util.debug = true;
+        Util.debug(list);
+        Util.debug = false;
         return methodGen.getMethod();
     }
 
