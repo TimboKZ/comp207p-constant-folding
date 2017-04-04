@@ -12,6 +12,13 @@ public class SimpleFolder extends Optimiser {
         super(classGen, constPoolGen);
     }
 
+    /**
+     * Traverses the method, tries to evaluate as many instructions as possible
+     * @param method
+     * @param methodGen
+     * @param list
+     * @return The optimised method
+     */
     protected Method optimiseMethod(
             Method method,
             MethodGen methodGen,
