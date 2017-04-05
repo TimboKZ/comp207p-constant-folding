@@ -26,16 +26,11 @@ public class SimpleFolder extends Optimiser {
         for (int index = 0; index < positions.length; index++) {
             int pos = positions[index];
             InstructionHandle handle = list.findHandle(pos);
-            /*
-            TODO: (Relevant to handleArithmeticInstruction)
-            Instead of deleting old handles immediately can try accumulating
-            the list of references to delete once the loop is over. Not sure
-            if this will work but in theory it should make the check below
-            unnecessary.
-             */
             if (handle == null) continue;
             Instruction instruction = list.findHandle(pos).getInstruction();
-            if (instruction instanceof ArithmeticInstruction) {
+            if (instruction instanceof ConversionInstruction) {
+                handleConversion(index, positions, list);
+            } else if (instruction instanceof ArithmeticInstruction) {
                 this.handleArithmeticInstruction(index, positions, list);
             }
         }
@@ -46,10 +41,48 @@ public class SimpleFolder extends Optimiser {
     /**
      * @return Determines whether an optimisation has been performed
      */
+    private boolean handleConversion(int index, int[] positions, InstructionList list) {
+        InstructionHandle handle = list.findHandle(positions[index]);
+        ConversionInstruction instruction = (ConversionInstruction) handle.getInstruction();
+        ArithmeticType type = Util.extractArithmeticType(instruction.getType(this.constPoolGen));
+        if (type == ArithmeticType.OTHER) return false;
+
+        InstructionHandle previousHandle = list.findHandle(positions[index - 1]);
+        Number value = Util.extractConstant(previousHandle, constPoolGen);
+        if (value == null) return false;
+
+        Instruction pushInstruction;
+        switch(type) {
+            case INT:
+                pushInstruction = Util.getConstantPushInstruction(value.intValue(), constPoolGen);
+                break;
+            case LONG:
+                pushInstruction = Util.getConstantPushInstruction(value.longValue(), constPoolGen);
+                break;
+            case FLOAT:
+                pushInstruction = Util.getConstantPushInstruction(value.floatValue(), constPoolGen);
+                break;
+            case DOUBLE:
+                pushInstruction = Util.getConstantPushInstruction(value.doubleValue(), constPoolGen);
+                break;
+            default:
+                return false;
+        }
+
+        list.insert(handle, pushInstruction);
+
+        attemptDelete(list, handle);
+        attemptDelete(list, previousHandle);
+        return true;
+    }
+
+    /**
+     * @return Determines whether an optimisation has been performed
+     */
     private boolean handleArithmeticInstruction(int index, int[] positions, InstructionList list) {
         InstructionHandle handle = list.findHandle(positions[index]);
         ArithmeticInstruction instruction = (ArithmeticInstruction) handle.getInstruction();
-        ArithmeticType type = Util.extractArithemticType(instruction.getType(this.constPoolGen));
+        ArithmeticType type = Util.extractArithmeticType(instruction.getType(this.constPoolGen));
         if (type == ArithmeticType.OTHER) return false;
 
         InstructionHandle handle1 = list.findHandle(positions[index - 2]);
@@ -57,17 +90,16 @@ public class SimpleFolder extends Optimiser {
         Number number1 = Util.extractConstant(handle1, constPoolGen);
         Number number2 = Util.extractConstant(handle2, constPoolGen);
         if (number1 == null || number2 == null) return false;
-        // TODO: Delete constants from the pool once they are not used anymore
-        // --> Use another optimization for that
-        // TODO: Checking pool size revealed they are not deleted immediately,
-        // TODO: but maybe this is done during bytecode generation phase?
 
         ArithmeticOperationType operationType = Util.extractArithmeticOperationType(instruction);
         int constIndex = this.performArithmeticOperation(operationType, type, number1, number2);
-        // Couldn't perform operation
-        if(constIndex == -1) return false;
+        if (constIndex == -1) return false;
 
-        list.insert(handle, new LDC(constIndex));
+        if(type == ArithmeticType.DOUBLE || type == ArithmeticType.LONG) {
+            list.insert(handle, new LDC2_W(constIndex));
+        } else {
+            list.insert(handle, new LDC(constIndex));
+        }
 
         attemptDelete(list, handle);
         attemptDelete(list, handle1);

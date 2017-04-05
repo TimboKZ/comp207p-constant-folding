@@ -31,12 +31,10 @@ public class ConstantPropagator extends Optimiser {
             MethodGen methodGen,
             InstructionList list
     ) {
-        this.varsByIndex = new HashMap<Integer, Number>();
+        this.varsByIndex = new HashMap<>();
         for (InstructionHandle handle : list.getInstructionHandles()) {
-            //InstructionHandle handle = list.findHandle(pos);
             if (handle == null) continue;
             Instruction current = handle.getInstruction();
-            Util.debug(current);
             try {
                 InstructionHandle newHandle = handle.getNext();
                 if (newHandle == null) continue;
@@ -50,13 +48,12 @@ public class ConstantPropagator extends Optimiser {
                 int loadI = ((LoadInstruction) current).getIndex();
                 if (this.varsByIndex.containsKey(loadI)) {
                     Number n = this.varsByIndex.get(loadI);
-                    Instruction insert = this.getNumberConstantInsertionInstruction(n);
+                    Instruction insert = Util.getConstantPushInstruction(n, constPoolGen);
                     list.append(handle, insert);
                     //attemptDelete(list, handle);
                     Util.deleteInstruction(list, handle, handle.getNext());
                 }
             }
-            //if (list.findHandle(pos).getInstruction() instanceof)
         }
         list.setPositions(true);
         methodGen.setMaxLocals();
@@ -74,18 +71,5 @@ public class ConstantPropagator extends Optimiser {
         } else {
             this.varsByIndex.remove(index);
         }
-    }
-
-    private Instruction getNumberConstantInsertionInstruction(Number val) {
-        if (val instanceof Double) { //Please, dear Java gods, forgive me
-            return new LDC2_W(this.constPoolGen.addDouble(val.doubleValue()));
-        } else if (val instanceof Long) {
-            return new LDC2_W(this.constPoolGen.addLong(val.longValue()));
-        } else if (val instanceof Float) {
-            return new LDC(this.constPoolGen.addFloat(val.floatValue()));
-        } else if (val instanceof Integer) {
-            return new LDC(this.constPoolGen.addInteger(val.intValue()));
-        }
-        return null;
     }
 }

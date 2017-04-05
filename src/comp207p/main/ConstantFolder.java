@@ -46,9 +46,9 @@ public class ConstantFolder {
             ignoreClasses.add("DynamicVariableFolding");
 
             // Choose which stages/classes/methods you want to debug:
-            debugStages.add(DebugStage.Propagation);
+            debugStages.add(DebugStage.Folding);
             debugClasses.add("ConstantVariableFolding");
-            debugMethods.add("methodOne");
+            debugMethods.add("methodTwo");
         } catch (IOException e) {
             e.printStackTrace();
         }
