@@ -1,13 +1,14 @@
 package comp207p.main;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.generic.*;
+import org.apache.bcel.generic.ClassGen;
+import org.apache.bcel.generic.ConstantPoolGen;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 public class ConstantFolder {
     ClassParser parser = null;
@@ -35,15 +36,16 @@ public class ConstantFolder {
         Method[] methods = classGen.getMethods();
         int methodCount = methods.length;
         Method[] newMethods = new Method[methodCount];
+        //System.out.println(gen.getJavaClass());
         for (int i = 0; i < methodCount; i++) {
             Method optimisedMethod = methods[i];
-            optimisedMethod = folder.optimiseMethod(optimisedMethod);
+            //optimisedMethod = folder.optimiseMethod(optimisedMethod);
             optimisedMethod = propagator.optimiseMethod(optimisedMethod);
-            newMethods[i] = optimisedMethod;
+            gen.replaceMethod(methods[i], optimisedMethod);
         }
-
-        gen.setMethods(newMethods);
         gen.setConstantPool(constantPoolGen);
+        //gen.update();
+        //System.out.println(gen.getJavaClass());
         this.optimized = gen.getJavaClass();
     }
 

@@ -89,4 +89,30 @@ public class Util {
         }
     }
 
+    public static boolean isArithmeticLoadInstruction(Instruction i) {
+        return i instanceof LoadInstruction && !(i instanceof ALOAD); //ALOAD = object reference
+    }
+
+    /**
+     * Deletes the next instruction
+     * Try/catch block done as per suggestion in:
+     * https://commons.apache.org/proper/commons-bcel/apidocs/org/apache/bcel/generic/TargetLostException.html
+     * @param list
+     * @param toDelete
+     */
+    public static void deleteInstruction(InstructionList list, InstructionHandle toDelete, InstructionHandle newTarget) {
+        if(toDelete == null) return;
+        try {
+            list.delete(toDelete);
+        } catch(TargetLostException e) {
+            //e.printStackTrace();
+            for (InstructionHandle target : e.getTargets()) {
+                for (InstructionTargeter targeter : target.getTargeters()) {
+                    //System.out.println(targeter + ", " + target + ", " + newTarget);
+                    targeter.updateTarget(target, newTarget);
+                }
+            }
+        }
+    }
+
 }

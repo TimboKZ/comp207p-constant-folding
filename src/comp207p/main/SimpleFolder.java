@@ -41,6 +41,9 @@ public class SimpleFolder extends Optimiser {
                 this.handleArithmeticInstruction(index, positions, list);
             }
         }
+        list.setPositions();
+        methodGen.setMaxLocals();
+        methodGen.setMaxStack();
         return methodGen.getMethod();
     }
 
@@ -58,7 +61,8 @@ public class SimpleFolder extends Optimiser {
         Number number1 = Util.extractConstant(handle1, constPoolGen);
         Number number2 = Util.extractConstant(handle2, constPoolGen);
         if (number1 == null || number2 == null) return false;
-        // TODO: Delete constants from the pool once they are not used anymore?
+        // TODO: Delete constants from the pool once they are not used anymore
+        // --> Use another optimization for that
         // TODO: Checking pool size revealed they are not deleted immediately,
         // TODO: but maybe this is done during bytecode generation phase?
 
@@ -73,7 +77,6 @@ public class SimpleFolder extends Optimiser {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return true;
     }
 
