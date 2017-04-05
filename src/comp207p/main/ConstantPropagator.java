@@ -24,10 +24,10 @@ import java.util.Map;
  */
 public class ConstantPropagator extends Optimiser {
 
-    Map<Integer, Number> varsByIndex = null; //simulates the 'register'
+    private Map<Integer, Number> varsByIndex = null; //simulates the 'register'
 
     public ConstantPropagator(ClassGen classGen, ConstantPoolGen constPoolGen) {
-        super(classGen, constPoolGen);
+        super(classGen, constPoolGen, DebugStage.Propagation);
     }
 
     /**
@@ -42,18 +42,18 @@ public class ConstantPropagator extends Optimiser {
             InstructionList list
     ) {
         this.varsByIndex = new HashMap<Integer, Number>();
-        if (this.classGen.getClassName().contains("ConstantVariableFolding")
-                && method.getName().equals("methodThree")) Util.debug = true;
         Util.debug(list);
         for (InstructionHandle handle: list.getInstructionHandles()) {
             //InstructionHandle handle = list.findHandle(pos);
             if (handle == null) continue;
             Instruction current = handle.getInstruction();
             try {
-                Instruction maybeConstPush = current;
-                Instruction maybeStore = handle.getNext().getInstruction();
-                updateConstantStore(maybeConstPush, maybeStore);
+                InstructionHandle newHandle = handle.getNext();
+                if(newHandle == null) continue;
+                Instruction maybeStore = newHandle.getInstruction();
+                updateConstantStore(current, maybeStore);
             } catch (Exception e) {
+                e.printStackTrace();
                 //Not enough instructions
             }
             if (Util.isArithmeticLoadInstruction(current)) {
@@ -69,7 +69,6 @@ public class ConstantPropagator extends Optimiser {
         }
         Util.debug("======== After propagating constants");
         Util.debug(list);
-        Util.debug = false;
         list.setPositions(true);
         methodGen.setMaxLocals();
         methodGen.setMaxStack();

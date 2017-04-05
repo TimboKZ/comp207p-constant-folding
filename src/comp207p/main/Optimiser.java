@@ -13,17 +13,40 @@ import org.apache.bcel.generic.MethodGen;
 public abstract class Optimiser {
     protected ClassGen classGen;
     protected ConstantPoolGen constPoolGen;
+    private DebugStage stage;
 
-    public Optimiser(ClassGen classGen, ConstantPoolGen constPoolGen) {
+    protected String debugString = null;
+
+    public Optimiser(ClassGen classGen, ConstantPoolGen constPoolGen, DebugStage stage) {
         this.classGen = classGen;
         this.constPoolGen = constPoolGen;
+        this.stage = stage;
     }
 
     public Method optimiseMethod(Method method) {
+        return this.optimiseMethod(method, -1);
+    }
+
+    public Method optimiseMethod(Method method, int iteration) {
         MethodGen methodGen = new MethodGen(method, this.classGen.getClassName(), this.constPoolGen);
         InstructionList list = methodGen.getInstructionList();
+        String className = this.classGen.getClassName();
+        String methodName = method.getName();
+        debugString = className + " --> " + methodName + "()";
+        String iterationString = "(it.: " + iteration + ")\n";
+        Util.debug = ConstantFolder.debugStages.contains(stage)
+                && ConstantFolder.debugClasses.contains(className)
+                && ConstantFolder.debugMethods.contains(methodName);
         if (list == null) return method;
-        return this.optimiseMethod(method, methodGen, list);
+        Util.debug(">>> " + debugString + " " + this.stage + " START " + iterationString);
+        Util.debug("BEFORE:");
+        Util.debug(list);
+        method = this.optimiseMethod(method, methodGen, list);
+        Util.debug("AFTER:");
+        Util.debug(list);
+        Util.debug("<<< " + debugString + " " + this.stage + " END " + iterationString);
+        Util.debug = false;
+        return method;
     }
 
     protected abstract Method optimiseMethod(

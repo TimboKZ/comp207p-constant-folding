@@ -9,14 +9,12 @@ import org.apache.bcel.generic.*;
 public class SimpleFolder extends Optimiser {
 
     public SimpleFolder(ClassGen classGen, ConstantPoolGen constPoolGen) {
-        super(classGen, constPoolGen);
+        super(classGen, constPoolGen, DebugStage.Folding);
     }
 
     /**
      * Traverses the method, tries to evaluate as many instructions as possible
-     * @param method
-     * @param methodGen
-     * @param list
+     *
      * @return The optimised method
      */
     protected Method optimiseMethod(
@@ -42,8 +40,6 @@ public class SimpleFolder extends Optimiser {
             }
         }
         list.setPositions(true);
-        //methodGen.setMaxLocals();
-        //methodGen.setMaxStack();
         return methodGen.getMethod();
     }
 
@@ -68,16 +64,26 @@ public class SimpleFolder extends Optimiser {
 
         ArithmeticOperationType operationType = Util.extractArithmeticOperationType(instruction);
         int constIndex = this.performArithmeticOperation(operationType, type, number1, number2);
+        // Couldn't perform operation
+        if(constIndex == -1) return false;
+
         list.insert(handle, new LDC(constIndex));
 
+        attemptDelete(list, handle);
+        attemptDelete(list, handle1);
+        attemptDelete(list, handle2);
+
+        return true;
+    }
+
+    private void attemptDelete(InstructionList list, InstructionHandle handle) {
         try {
             list.delete(handle);
-            list.delete(handle1);
-            list.delete(handle2);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error: (" + debugString + ")");
+            System.err.println(e.getClass() + e.getMessage());
+            System.err.println();
         }
-        return true;
     }
 
     /**

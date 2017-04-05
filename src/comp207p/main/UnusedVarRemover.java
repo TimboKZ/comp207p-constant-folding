@@ -22,16 +22,13 @@ import java.util.Set;
  * @author Christoph Ulshoefer <christophsulshoefer@gmail.com> 05/04/17.
  */
 public class UnusedVarRemover extends Optimiser {
-    int nops = 0;
 
     public UnusedVarRemover(ClassGen classGen, ConstantPoolGen constPoolGen) {
-        super(classGen, constPoolGen);
+        super(classGen, constPoolGen, DebugStage.Removal);
     }
 
     @Override
     protected Method optimiseMethod(Method method, MethodGen methodGen, InstructionList list) {
-        if (this.classGen.getClassName().contains("ConstantVariableFolding")
-                && method.getName().equals("methodThree")) Util.debug = true;
         Set<Integer> unusedVars;
         InstructionFinder i = new InstructionFinder(list);
         try {
@@ -50,16 +47,15 @@ public class UnusedVarRemover extends Optimiser {
         list.setPositions(true);
         Util.debug("==== After removing unused vars");
         Util.debug(list);
-        Util.debug = false;
         return methodGen.getMethod();
     }
 
     private void removeUnusedVarAtIndex(InstructionList list, Iterator<InstructionHandle[]> storeI, Integer unusedVarI) {
-        for (Iterator<InstructionHandle[]> it = storeI; it.hasNext(); ) {
-            InstructionHandle[] handles = it.next();
+        while (storeI.hasNext()) {
+            InstructionHandle[] handles = storeI.next();
             InstructionHandle handle = handles[0];
             if (handle == null || handle.getInstruction() == null) {
-                System.out.println("Handle without instruction: ");
+                Util.debug("Handle without instruction: ");
                 continue;
             }
             //Util.debug(handle + ", prev: " + handle.getPrev() + ", next: " + handle.getNext());
@@ -96,7 +92,6 @@ public class UnusedVarRemover extends Optimiser {
         for (Iterator<InstructionHandle[]> it = storeI; it.hasNext(); ) {
             InstructionHandle[] handles = it.next();
             InstructionHandle prev = handles[0].getPrev();
-            //Util.debug(prev);
             if (prev != null && prev.getInstruction() instanceof ConstantPushInstruction) {
                 unusedVars.add(((StoreInstruction) (handles[0].getInstruction())).getIndex());
             }

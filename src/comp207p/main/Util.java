@@ -25,6 +25,10 @@ public class Util {
                 return (Number) value;
             }
         }
+        if (instruction instanceof ConstantPushInstruction) {
+            ConstantPushInstruction push = (ConstantPushInstruction) instruction;
+            return push.getValue();
+        }
         return null;
     }
 
@@ -63,7 +67,7 @@ public class Util {
         } catch (Exception e) {
             return ArithmeticOperationType.OTHER;
         }
-        switch(type) {
+        switch (type) {
             case IADD:
             case LADD:
             case FADD:
@@ -97,19 +101,20 @@ public class Util {
      * Deletes the next instruction
      * Try/catch block done as per suggestion in:
      * https://commons.apache.org/proper/commons-bcel/apidocs/org/apache/bcel/generic/TargetLostException.html
+     *
      * @param list
      * @param toDelete
      */
     public static void deleteInstruction(InstructionList list, InstructionHandle toDelete, InstructionHandle newTarget) {
-        if(toDelete == null) return;
+        if (toDelete == null) return;
         try {
             //System.out.println("deleting: " + toDelete + ", " + newTarget);
             list.delete(toDelete);
-        } catch(TargetLostException e) {
+        } catch (TargetLostException e) {
             //e.printStackTrace();
             for (InstructionHandle target : e.getTargets()) {
                 for (InstructionTargeter targeter : target.getTargeters()) {
-                    System.out.println(toDelete + "targeter: " + targeter + ", " + target + ", " + newTarget);
+                    Util.debug(toDelete + " targeter: " + targeter + ", " + target + ", " + newTarget);
                     targeter.updateTarget(target, newTarget);
                 }
             }
