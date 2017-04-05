@@ -76,16 +76,6 @@ public class SimpleFolder extends Optimiser {
         return true;
     }
 
-    private void attemptDelete(InstructionList list, InstructionHandle handle) {
-        try {
-            list.delete(handle);
-        } catch (Exception e) {
-            System.err.println("Error: (" + debugString + ")");
-            System.err.println(e.getClass() + e.getMessage());
-            System.err.println();
-        }
-    }
-
     /**
      * @return Index of the newly inserted constant
      */

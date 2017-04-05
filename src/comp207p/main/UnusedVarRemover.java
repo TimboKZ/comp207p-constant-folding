@@ -89,7 +89,7 @@ public class UnusedVarRemover extends Optimiser {
         for (Iterator<InstructionHandle[]> it = storeI; it.hasNext(); ) {
             InstructionHandle[] handles = it.next();
             InstructionHandle prev = handles[0].getPrev();
-            if (prev != null && prev.getInstruction() instanceof ConstantPushInstruction) {
+            if (prev != null && Util.extractConstant(prev, this.constPoolGen) != null) {
                 unusedVars.add(((StoreInstruction) (handles[0].getInstruction())).getIndex());
             }
         }

@@ -25,6 +25,8 @@ public class ConstantFolder {
     JavaClass original = null;
     JavaClass optimized = null;
 
+    public static List<String> ignoreClasses = new ArrayList<>();
+
     public static List<DebugStage> debugStages = new ArrayList<>();
     public static List<String> debugClasses = new ArrayList<>();
     public static List<String> debugMethods = new ArrayList<>();
@@ -39,6 +41,9 @@ public class ConstantFolder {
             this.folder = new SimpleFolder(classGen, constPoolGen);
             this.propagator = new ConstantPropagator(classGen, constPoolGen);
             this.remover = new UnusedVarRemover(classGen, constPoolGen);
+
+            // Choose which classes to ignore
+            ignoreClasses.add("DynamicVariableFolding");
 
             // Choose which stages/classes/methods you want to debug:
             debugStages.add(DebugStage.Propagation);

@@ -1,10 +1,7 @@
 package comp207p.main;
 
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.generic.ClassGen;
-import org.apache.bcel.generic.ConstantPoolGen;
-import org.apache.bcel.generic.InstructionList;
-import org.apache.bcel.generic.MethodGen;
+import org.apache.bcel.generic.*;
 
 /**
  * @author Timur Kuzhagaliyev
@@ -28,6 +25,12 @@ public abstract class Optimiser {
         InstructionList list = methodGen.getInstructionList();
         String className = this.classGen.getClassName();
         String shortClass = className.substring(className.lastIndexOf('.') + 1).trim();
+
+        if (ConstantFolder.ignoreClasses.contains(className)
+                || ConstantFolder.ignoreClasses.contains(shortClass)) {
+            return method;
+        }
+
         String methodName = method.getName();
         debugString = shortClass + " --> " + methodName + "() " + this.stage;
         String iterationString = "(it " + iteration + ")";
@@ -47,6 +50,17 @@ public abstract class Optimiser {
         Util.debug("\\\\\\\\\\\\\\\\\\\\\\\\\n");
         Util.debug = false;
         return method;
+    }
+
+    protected void attemptDelete(InstructionList list, InstructionHandle handle) {
+        if (handle == null) return;
+        try {
+            list.delete(handle);
+        } catch (Exception e) {
+            System.err.println("Error: (" + debugString + ")");
+            System.err.println(e.getClass() + e.getMessage());
+            System.err.println();
+        }
     }
 
     protected abstract Method optimiseMethod(
