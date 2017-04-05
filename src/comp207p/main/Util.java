@@ -10,7 +10,7 @@ public class Util {
     public static boolean debug = false;
 
     public static void debug(Object object) {
-        if (Util.debug) System.out.println(object.toString());
+        if (Util.debug) System.out.println(object);
     }
 
     public static Number extractConstant(InstructionHandle handle, ConstantPoolGen constPoolGen) {
@@ -103,12 +103,13 @@ public class Util {
     public static void deleteInstruction(InstructionList list, InstructionHandle toDelete, InstructionHandle newTarget) {
         if(toDelete == null) return;
         try {
+            //System.out.println("deleting: " + toDelete + ", " + newTarget);
             list.delete(toDelete);
         } catch(TargetLostException e) {
             //e.printStackTrace();
             for (InstructionHandle target : e.getTargets()) {
                 for (InstructionTargeter targeter : target.getTargeters()) {
-                    //System.out.println(targeter + ", " + target + ", " + newTarget);
+                    System.out.println(toDelete + "targeter: " + targeter + ", " + target + ", " + newTarget);
                     targeter.updateTarget(target, newTarget);
                 }
             }

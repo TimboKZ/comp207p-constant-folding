@@ -8,6 +8,7 @@ import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.LDC;
+import org.apache.bcel.generic.LDC2_W;
 import org.apache.bcel.generic.LoadInstruction;
 import org.apache.bcel.generic.MethodGen;
 import org.apache.bcel.generic.StoreInstruction;
@@ -44,11 +45,8 @@ public class ConstantPropagator extends Optimiser {
         if (this.classGen.getClassName().contains("ConstantVariableFolding")
                 && method.getName().equals("methodThree")) Util.debug = true;
         Util.debug(list);
-
-        int[] positions = list.getInstructionPositions();
-        for (int index = 0; index < positions.length; index++) {
-            int pos = positions[index];
-            InstructionHandle handle = list.findHandle(pos);
+        for (InstructionHandle handle: list.getInstructionHandles()) {
+            //InstructionHandle handle = list.findHandle(pos);
             if (handle == null) continue;
             Instruction current = handle.getInstruction();
             try {
@@ -62,16 +60,17 @@ public class ConstantPropagator extends Optimiser {
                 int loadI = ((LoadInstruction) current).getIndex();
                 if (this.varsByIndex.containsKey(loadI)) {
                     Number n = this.varsByIndex.get(loadI);
-                    this.insertNumberConstant(list, handle, n);
-                    Util.deleteInstruction(list, handle, handle.getPrev());
+                    Instruction insert = this.getNumberConstantInsertionInstruction(n);
+                    list.append(handle, insert);
+                    Util.deleteInstruction(list, handle, handle.getNext());
                 }
             }
             //if (list.findHandle(pos).getInstruction() instanceof)
         }
-        Util.debug("========");
+        Util.debug("======== After propagating constants");
         Util.debug(list);
         Util.debug = false;
-        list.setPositions();
+        list.setPositions(true);
         methodGen.setMaxLocals();
         methodGen.setMaxStack();
         return methodGen.getMethod();
@@ -94,15 +93,16 @@ public class ConstantPropagator extends Optimiser {
         }
     }
 
-    private void insertNumberConstant(InstructionList list, InstructionHandle handle, Number val) {
+    private Instruction getNumberConstantInsertionInstruction(Number val) {
         if (val instanceof Double) { //Please, dear Java gods, forgive me
-            list.insert(handle, new LDC(this.constPoolGen.addDouble((Double) val)));
+            return new LDC2_W(this.constPoolGen.addDouble(val.doubleValue()));
         } else if (val instanceof Long) {
-            list.insert(handle, new LDC(this.constPoolGen.addLong((Long) val)));
+            return new LDC2_W(this.constPoolGen.addLong(val.longValue()));
         } else if (val instanceof Float) {
-            list.insert(handle, new LDC(this.constPoolGen.addFloat((Float) val)));
+            return new LDC(this.constPoolGen.addFloat(val.floatValue()));
         } else if (val instanceof Integer) {
-            list.insert(handle, new LDC(this.constPoolGen.addInteger((Integer) val)));
+            return new LDC(this.constPoolGen.addInteger(val.intValue()));
         }
+        return null;
     }
 }

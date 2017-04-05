@@ -41,9 +41,9 @@ public class SimpleFolder extends Optimiser {
                 this.handleArithmeticInstruction(index, positions, list);
             }
         }
-        list.setPositions();
-        methodGen.setMaxLocals();
-        methodGen.setMaxStack();
+        list.setPositions(true);
+        //methodGen.setMaxLocals();
+        //methodGen.setMaxStack();
         return methodGen.getMethod();
     }
 

@@ -32,17 +32,20 @@ public class ConstantFolder {
         ConstantPoolGen constantPoolGen = classGen.getConstantPool();
         SimpleFolder folder = new SimpleFolder(classGen, constantPoolGen);
         ConstantPropagator propagator = new ConstantPropagator(classGen, constantPoolGen);
-
+        UnusedVarRemover deadRemover = new UnusedVarRemover(classGen, constantPoolGen);
         Method[] methods = classGen.getMethods();
         int methodCount = methods.length;
         Method[] newMethods = new Method[methodCount];
         //System.out.println(gen.getJavaClass());
         for (int i = 0; i < methodCount; i++) {
             Method optimisedMethod = methods[i];
-            //optimisedMethod = folder.optimiseMethod(optimisedMethod);
+            optimisedMethod = folder.optimiseMethod(optimisedMethod);
             optimisedMethod = propagator.optimiseMethod(optimisedMethod);
+            optimisedMethod = deadRemover.optimiseMethod(optimisedMethod);
             gen.replaceMethod(methods[i], optimisedMethod);
         }
+
+        gen.setMajor(50);
         gen.setConstantPool(constantPoolGen);
         //gen.update();
         //System.out.println(gen.getJavaClass());
