@@ -42,7 +42,6 @@ public class ConstantPropagator extends Optimiser {
             InstructionList list
     ) {
         this.varsByIndex = new HashMap<Integer, Number>();
-        Util.debug(list);
         for (InstructionHandle handle: list.getInstructionHandles()) {
             //InstructionHandle handle = list.findHandle(pos);
             if (handle == null) continue;
@@ -67,8 +66,6 @@ public class ConstantPropagator extends Optimiser {
             }
             //if (list.findHandle(pos).getInstruction() instanceof)
         }
-        Util.debug("======== After propagating constants");
-        Util.debug(list);
         list.setPositions(true);
         methodGen.setMaxLocals();
         methodGen.setMaxStack();

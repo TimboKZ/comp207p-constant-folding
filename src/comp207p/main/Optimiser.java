@@ -31,20 +31,24 @@ public abstract class Optimiser {
         MethodGen methodGen = new MethodGen(method, this.classGen.getClassName(), this.constPoolGen);
         InstructionList list = methodGen.getInstructionList();
         String className = this.classGen.getClassName();
+        String shortClass = className.substring(className.lastIndexOf('.') + 1).trim();
         String methodName = method.getName();
-        debugString = className + " --> " + methodName + "()";
-        String iterationString = "(it.: " + iteration + ")\n";
+        debugString = shortClass + " --> " + methodName + "() " + this.stage;
+        String iterationString = "(it " + iteration + ")";
         Util.debug = ConstantFolder.debugStages.contains(stage)
-                && ConstantFolder.debugClasses.contains(className)
+                && (ConstantFolder.debugClasses.contains(className)
+                || ConstantFolder.debugClasses.contains(shortClass))
                 && ConstantFolder.debugMethods.contains(methodName);
         if (list == null) return method;
-        Util.debug(">>> " + debugString + " " + this.stage + " START " + iterationString);
+        Util.debug("////////////");
+        Util.debug("STR " + debugString + " " + iterationString + "\n");
         Util.debug("BEFORE:");
         Util.debug(list);
         method = this.optimiseMethod(method, methodGen, list);
         Util.debug("AFTER:");
         Util.debug(list);
-        Util.debug("<<< " + debugString + " " + this.stage + " END " + iterationString);
+        Util.debug("END " + debugString + " " + iterationString);
+        Util.debug("\\\\\\\\\\\\\\\\\\\\\\\\\n");
         Util.debug = false;
         return method;
     }

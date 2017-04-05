@@ -40,8 +40,9 @@ public class ConstantFolder {
             this.propagator = new ConstantPropagator(classGen, constPoolGen);
             this.remover = new UnusedVarRemover(classGen, constPoolGen);
 
-            debugStages.add(DebugStage.Folding);
-            debugClasses.add("comp207p.target.ConstantVariableFolding");
+            // Choose which stages/classes/methods you want to debug:
+            debugStages.add(DebugStage.Propagation);
+            debugClasses.add("ConstantVariableFolding");
             debugMethods.add("methodOne");
         } catch (IOException e) {
             e.printStackTrace();
@@ -65,8 +66,6 @@ public class ConstantFolder {
             for (int iteration = 0; iteration < maxInstructionCount; iteration++) {
                 optimisedMethod = folder.optimiseMethod(optimisedMethod, iteration);
                 optimisedMethod = propagator.optimiseMethod(optimisedMethod, iteration);
-                // TODO: When you comment the line above SimpleFoldingTest takes ages to execute,
-                // TODO: don't think it's desired behaviour?
                 optimisedMethod = remover.optimiseMethod(optimisedMethod, iteration);
             }
             classGen.replaceMethod(method, optimisedMethod);

@@ -45,8 +45,6 @@ public class UnusedVarRemover extends Optimiser {
         }
         //this.printLocalVars(methodGen);
         list.setPositions(true);
-        Util.debug("==== After removing unused vars");
-        Util.debug(list);
         return methodGen.getMethod();
     }
 
