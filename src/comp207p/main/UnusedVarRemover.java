@@ -27,7 +27,6 @@ public class UnusedVarRemover extends Optimiser {
         super(classGen, constPoolGen, DebugStage.Removal);
     }
 
-    @Override
     protected Method optimiseMethod(Method method, MethodGen methodGen, InstructionList list) {
         Set<Integer> unusedVars;
         InstructionFinder i = new InstructionFinder(list);

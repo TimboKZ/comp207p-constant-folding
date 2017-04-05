@@ -23,10 +23,6 @@ public abstract class Optimiser {
         this.stage = stage;
     }
 
-    public Method optimiseMethod(Method method) {
-        return this.optimiseMethod(method, -1);
-    }
-
     public Method optimiseMethod(Method method, int iteration) {
         MethodGen methodGen = new MethodGen(method, this.classGen.getClassName(), this.constPoolGen);
         InstructionList list = methodGen.getInstructionList();
