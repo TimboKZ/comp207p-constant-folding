@@ -6,7 +6,6 @@ import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.ClassGen;
 import org.apache.bcel.generic.ConstantPoolGen;
-import org.apache.bcel.generic.InstructionList;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -73,8 +72,8 @@ public class ConstantFolder {
             Code code = method.getCode();
             if (code == null) continue;
             int iteration = 1;
-            boolean optimisationPerformed = true;
-            while (optimisationPerformed) {
+            boolean optimisationPerformed;
+            do {
                 optimisationPerformed = false;
                 for (Optimiser optimiser : this.optimisers) {
                     Method optimisedMethod = optimiser.optimiseMethod(method, iteration);
@@ -84,7 +83,7 @@ public class ConstantFolder {
                     }
                 }
                 iteration++;
-            }
+            } while (optimisationPerformed);
             classGen.replaceMethod(originalMethod, method);
         }
     }
