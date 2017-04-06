@@ -25,4 +25,19 @@ public class CheekyFoldingTest {
     public void testMethodThree() {
         assertEquals(4, cf.methodThree());
     }
+
+    @Test
+    public void testMethodFour() {
+        assertEquals(44, cf.methodFour());
+    }
+
+    @Test
+    public void testMethodSix() {
+        assertEquals(23, cf.methodSix());
+    }
+
+    @Test
+    public void testMethodSeven() {
+        assertEquals(4, cf.methodSeven());
+    }
 }

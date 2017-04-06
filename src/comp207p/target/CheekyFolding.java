@@ -50,7 +50,7 @@ public class CheekyFolding {
     public int methodFive(int varOutsideOfThing) {
         int c = 3;
         int d;
-        if(varOutsideOfThing > 3) {
+        if(varOutsideOfThing > -1) {
             d = 13;
         } else {
             d = 15;
