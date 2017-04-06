@@ -43,36 +43,77 @@ public class ConstantPropagator extends Optimiser {
                 }
             }
             if (Util.isArithmeticLoadInstruction(instruction)) {
-                boolean propagationNeeded = false;
-                for (InstructionTargeter targeter : handle.getTargeters()) {
-                    if (!(targeter instanceof GotoInstruction)) {
-                        propagationNeeded = true;
-                        break;
-                    }
-                }
-                if (handle.getTargeters().length == 0 || propagationNeeded) {
-                    LoadInstruction load = (LoadInstruction) instruction;
-                    int index = load.getIndex();
-                    if (this.varsByIndex.containsKey(index)) {
-                        optimisationPerformed = true;
-                        Number value = this.varsByIndex.get(index);
-                        Instruction insert = Util.getConstantPushInstruction(value, constPoolGen);
-                        InstructionHandle newHandle = list.append(handle, insert);
-                        boolean canDelete = true;
-                        for (InstructionTargeter targeter : handle.getTargeters()) {
-                            if (targeter instanceof GotoInstruction) {
-                                canDelete = false;
-                            } else {
-                                targeter.updateTarget(handle, newHandle);
-                            }
-                        }
-                        if (canDelete) attemptDelete(list, handle, newHandle);
-                    }
-                }
+                optimisationPerformed = optimisationPerformed || attemptPropagation(list, handle);
             }
         }
         list.setPositions(true);
         return optimisationPerformed ? methodGen.getMethod() : null;
+    }
+
+    /**
+     * If load instruction is a target for goto, do nothing.
+     * If load instruction is in a loop and neighbour instructions alter the variable referenced by load, do nothing.
+     * If none of the above are true, replace load with constant push.
+     *
+     * @return Determines whether an optimisation has been performed
+     */
+    private boolean attemptPropagation(InstructionList list, InstructionHandle handle) {
+        LoadInstruction load = (LoadInstruction) handle.getInstruction();
+        int variableIndex = load.getIndex();
+        if (isGotoTarget(handle) || !this.varsByIndex.containsKey(variableIndex)) return false;
+        if (isInLoopAndChanges(list, handle, variableIndex)) return false;
+
+        Number value = this.varsByIndex.get(variableIndex);
+        Instruction insert = Util.getConstantPushInstruction(value, constPoolGen);
+        InstructionHandle newHandle = list.append(handle, insert);
+        attemptDelete(list, handle, newHandle);
+        return true;
+    }
+
+    private boolean isGotoTarget(InstructionHandle handle) {
+        for (InstructionTargeter targeter : handle.getTargeters()) {
+            if (targeter instanceof GotoInstruction) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isInLoopAndChanges(InstructionList list, InstructionHandle handle, int variableIndex) {
+        int position = handle.getPosition();
+        InstructionHandle nextHandle = handle.getNext();
+        boolean inLoop = false;
+        int loopStart = -1;
+        int loopEnd = -1;
+        while (nextHandle != null) {
+            Instruction nextInstruction = nextHandle.getInstruction();
+            if (nextInstruction instanceof GotoInstruction) {
+                GotoInstruction gotoInstruction = (GotoInstruction) nextInstruction;
+                int targetPosition = gotoInstruction.getTarget().getPosition();
+                if (targetPosition < position) {
+                    inLoop = true;
+                    loopStart = targetPosition;
+                    loopEnd = nextHandle.getPosition();
+                }
+            }
+            nextHandle = nextHandle.getNext();
+        }
+
+        if (!inLoop) return false;
+
+        for (int i = loopStart; i < loopEnd; i++) {
+            InstructionHandle loopHandle = list.findHandle(i);
+            if (loopHandle == null) continue;
+            Instruction instruction = loopHandle.getInstruction();
+            if (instruction instanceof LocalVariableInstruction && !(instruction instanceof LoadInstruction)) {
+                LocalVariableInstruction variableInstruction = (LocalVariableInstruction) instruction;
+                if (variableInstruction.getIndex() == variableIndex) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private void updateConstantStore(Instruction current, StoreInstruction next) {
