@@ -18,7 +18,7 @@ public class CheekyFoldingTest {
 
     @Test
     public void testMethodTwo(){
-        assertEquals(18, cf.methodTwo());
+        assertEquals(6, cf.methodTwo());
     }
 
     @Test
