@@ -43,14 +43,12 @@ public class ConstantFolder {
             this.propagator = new ConstantPropagator(classGen, constPoolGen);
             this.remover = new UnusedVarRemover(classGen, constPoolGen);
 
-            // Choose which classes to ignore
+            // Choose which classes/methods to ignore (uses AND, *not* OR)
             ignoreClasses.add("DynamicVariableFolding");
-            ignoreMethods.add("methodFour");
+            ignoreMethods.add("methodNameHere");
 
-            // Choose which stages/classes/methods you want to debug:
-            debugStages.add(DebugStage.Folding);
+            // Choose which stages/classes/methods to print debug output for (uses AND, *not* OR)
             debugStages.add(DebugStage.Propagation);
-            debugStages.add(DebugStage.Removal);
             debugClasses.add("DynamicVariableFolding");
             debugMethods.add("methodFour");
         } catch (IOException e) {

@@ -32,38 +32,50 @@ public class ConstantPropagator extends Optimiser {
             InstructionList list
     ) {
         this.varsByIndex = new HashMap<>();
+        outer:
         for (InstructionHandle handle : list.getInstructionHandles()) {
-            if (handle == null) continue;
-            Instruction current = handle.getInstruction();
-            try {
-                InstructionHandle newHandle = handle.getNext();
-                if (newHandle == null) continue;
-                Instruction maybeStore = newHandle.getInstruction();
-                updateConstantStore(current, maybeStore);
-            } catch (Exception e) {
-                e.printStackTrace();
-                //Not enough instructions
+            Instruction instruction = handle.getInstruction();
+            InstructionHandle nextHandle = handle.getNext();
+            if (nextHandle != null) {
+                Instruction nextInstruction = nextHandle.getInstruction();
+                if (nextInstruction instanceof StoreInstruction) {
+                    updateConstantStore(instruction, (StoreInstruction) nextInstruction);
+                }
             }
-            if (Util.isArithmeticLoadInstruction(current)) {
-                int loadI = ((LoadInstruction) current).getIndex();
-                if (this.varsByIndex.containsKey(loadI)) {
-                    Number n = this.varsByIndex.get(loadI);
-                    Instruction insert = Util.getConstantPushInstruction(n, constPoolGen);
-                    list.append(handle, insert);
-                    attemptDelete(list, handle, handle.getNext());
+            if (Util.isArithmeticLoadInstruction(instruction)) {
+                boolean propagationNeeded = false;
+                for (InstructionTargeter targeter : handle.getTargeters()) {
+                    if (!(targeter instanceof GotoInstruction)) {
+                        propagationNeeded = true;
+                        break;
+                    }
+                }
+                if (handle.getTargeters().length == 0 || propagationNeeded) {
+                    LoadInstruction load = (LoadInstruction) instruction;
+                    int index = load.getIndex();
+                    if (this.varsByIndex.containsKey(index)) {
+                        Number value = this.varsByIndex.get(index);
+                        Instruction insert = Util.getConstantPushInstruction(value, constPoolGen);
+                        InstructionHandle newHandle = list.append(handle, insert);
+                        boolean canDelete = true;
+                        for (InstructionTargeter targeter : handle.getTargeters()) {
+                            if (targeter instanceof GotoInstruction) {
+                                canDelete = false;
+                            } else {
+                                targeter.updateTarget(handle, newHandle);
+                            }
+                        }
+                        if (canDelete) attemptDelete(list, handle, newHandle);
+                    }
                 }
             }
         }
         list.setPositions(true);
-        methodGen.setMaxLocals();
-        methodGen.setMaxStack();
         return methodGen.getMethod();
     }
 
-    private void updateConstantStore(Instruction current, Instruction next) {
-        if (!(next instanceof StoreInstruction)) return;
-        int index = ((StoreInstruction) next).getIndex();
-
+    private void updateConstantStore(Instruction current, StoreInstruction next) {
+        int index = next.getIndex();
         Number value = Util.extractConstant(current, this.constPoolGen);
         if (value != null) {
             this.varsByIndex.put(index, value);

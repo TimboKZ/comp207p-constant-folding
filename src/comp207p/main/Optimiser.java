@@ -74,6 +74,7 @@ public abstract class Optimiser {
                 System.err.println();
             }
         }
+        list.setPositions(true);
     }
 
     protected abstract Method optimiseMethod(

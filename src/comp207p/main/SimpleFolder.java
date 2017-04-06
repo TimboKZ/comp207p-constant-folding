@@ -22,32 +22,27 @@ public class SimpleFolder extends Optimiser {
             MethodGen methodGen,
             InstructionList list
     ) {
-        int[] positions = list.getInstructionPositions();
-        for (int index = 0; index < positions.length; index++) {
-            int pos = positions[index];
-            InstructionHandle handle = list.findHandle(pos);
+        for (InstructionHandle handle : list.getInstructionHandles()) {
             if (handle == null) continue;
-            Instruction instruction = list.findHandle(pos).getInstruction();
+            Instruction instruction = handle.getInstruction();
             if (instruction instanceof ConversionInstruction) {
-                handleConversion(index, positions, list);
+                this.handleConversion(list, handle);
             } else if (instruction instanceof ArithmeticInstruction) {
-                this.handleArithmeticInstruction(index, positions, list);
+                this.handleArithmeticInstruction(list, handle);
             }
         }
-        list.setPositions(true);
         return methodGen.getMethod();
     }
 
     /**
      * @return Determines whether an optimisation has been performed
      */
-    private boolean handleConversion(int index, int[] positions, InstructionList list) {
-        InstructionHandle handle = list.findHandle(positions[index]);
+    private boolean handleConversion(InstructionList list, InstructionHandle handle) {
         ConversionInstruction instruction = (ConversionInstruction) handle.getInstruction();
         ArithmeticType type = Util.extractArithmeticType(instruction.getType(this.constPoolGen));
         if (type == ArithmeticType.OTHER) return false;
 
-        InstructionHandle previousHandle = list.findHandle(positions[index - 1]);
+        InstructionHandle previousHandle = handle.getPrev();
         Number value = Util.extractConstant(previousHandle, constPoolGen);
         if (value == null) return false;
 
@@ -79,14 +74,13 @@ public class SimpleFolder extends Optimiser {
     /**
      * @return Determines whether an optimisation has been performed
      */
-    private boolean handleArithmeticInstruction(int index, int[] positions, InstructionList list) {
-        InstructionHandle handle = list.findHandle(positions[index]);
+    private boolean handleArithmeticInstruction(InstructionList list, InstructionHandle handle) {
         ArithmeticInstruction instruction = (ArithmeticInstruction) handle.getInstruction();
         ArithmeticType type = Util.extractArithmeticType(instruction.getType(this.constPoolGen));
         if (type == ArithmeticType.OTHER) return false;
 
-        InstructionHandle handle1 = list.findHandle(positions[index - 2]);
-        InstructionHandle handle2 = list.findHandle(positions[index - 1]);
+        InstructionHandle handle2 = handle.getPrev();
+        InstructionHandle handle1 = handle2.getPrev();
         Number number1 = Util.extractConstant(handle1, constPoolGen);
         Number number2 = Util.extractConstant(handle2, constPoolGen);
         if (number1 == null || number2 == null) return false;
