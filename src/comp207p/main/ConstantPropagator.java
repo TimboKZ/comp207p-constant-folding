@@ -1,17 +1,7 @@
 package comp207p.main;
 
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.generic.ClassGen;
-import org.apache.bcel.generic.ConstantPoolGen;
-import org.apache.bcel.generic.ConstantPushInstruction;
-import org.apache.bcel.generic.Instruction;
-import org.apache.bcel.generic.InstructionHandle;
-import org.apache.bcel.generic.InstructionList;
-import org.apache.bcel.generic.LDC;
-import org.apache.bcel.generic.LDC2_W;
-import org.apache.bcel.generic.LoadInstruction;
-import org.apache.bcel.generic.MethodGen;
-import org.apache.bcel.generic.StoreInstruction;
+import org.apache.bcel.generic.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,85 +14,74 @@ import java.util.Map;
  */
 public class ConstantPropagator extends Optimiser {
 
-    Map<Integer, Number> varsByIndex = null; //simulates the 'register'
+    private Map<Integer, Number> varsByIndex = null; //simulates the 'register'
 
     public ConstantPropagator(ClassGen classGen, ConstantPoolGen constPoolGen) {
-        super(classGen, constPoolGen);
+        super(classGen, constPoolGen, DebugStage.Propagation);
     }
 
     /**
-     * Replaces variables with constants
-     * TODO delete variable store if unnecessary
+     * If load instruction is not referenced by goto commands, replaces it with a constant push.
+     * Otherwise appends constant push after load and re-targets all non-goto commands to the new constant push.
      *
-     * @return The optimised method
+     * @return Optimised method or null if no optimisations could be done
      */
     protected Method optimiseMethod(
             Method method,
             MethodGen methodGen,
             InstructionList list
     ) {
-        this.varsByIndex = new HashMap<Integer, Number>();
-        if (this.classGen.getClassName().contains("ConstantVariableFolding")
-                && method.getName().equals("methodThree")) Util.debug = true;
-        Util.debug(list);
-        for (InstructionHandle handle: list.getInstructionHandles()) {
-            //InstructionHandle handle = list.findHandle(pos);
-            if (handle == null) continue;
-            Instruction current = handle.getInstruction();
-            try {
-                Instruction maybeConstPush = current;
-                Instruction maybeStore = handle.getNext().getInstruction();
-                updateConstantStore(maybeConstPush, maybeStore);
-            } catch (Exception e) {
-                //Not enough instructions
-            }
-            if (Util.isArithmeticLoadInstruction(current)) {
-                int loadI = ((LoadInstruction) current).getIndex();
-                if (this.varsByIndex.containsKey(loadI)) {
-                    Number n = this.varsByIndex.get(loadI);
-                    Instruction insert = this.getNumberConstantInsertionInstruction(n);
-                    list.append(handle, insert);
-                    Util.deleteInstruction(list, handle, handle.getNext());
+        boolean optimisationPerformed = false;
+        this.varsByIndex = new HashMap<>();
+        for (InstructionHandle handle : list.getInstructionHandles()) {
+            Instruction instruction = handle.getInstruction();
+            InstructionHandle nextHandle = handle.getNext();
+            if (nextHandle != null) {
+                Instruction nextInstruction = nextHandle.getInstruction();
+                if (nextInstruction instanceof StoreInstruction) {
+                    updateConstantStore(instruction, (StoreInstruction) nextInstruction);
                 }
             }
-            //if (list.findHandle(pos).getInstruction() instanceof)
+            if (Util.isArithmeticLoadInstruction(instruction)) {
+                boolean propagationNeeded = false;
+                for (InstructionTargeter targeter : handle.getTargeters()) {
+                    if (!(targeter instanceof GotoInstruction)) {
+                        propagationNeeded = true;
+                        break;
+                    }
+                }
+                if (handle.getTargeters().length == 0 || propagationNeeded) {
+                    LoadInstruction load = (LoadInstruction) instruction;
+                    int index = load.getIndex();
+                    if (this.varsByIndex.containsKey(index)) {
+                        optimisationPerformed = true;
+                        Number value = this.varsByIndex.get(index);
+                        Instruction insert = Util.getConstantPushInstruction(value, constPoolGen);
+                        InstructionHandle newHandle = list.append(handle, insert);
+                        boolean canDelete = true;
+                        for (InstructionTargeter targeter : handle.getTargeters()) {
+                            if (targeter instanceof GotoInstruction) {
+                                canDelete = false;
+                            } else {
+                                targeter.updateTarget(handle, newHandle);
+                            }
+                        }
+                        if (canDelete) attemptDelete(list, handle, newHandle);
+                    }
+                }
+            }
         }
-        Util.debug("======== After propagating constants");
-        Util.debug(list);
-        Util.debug = false;
         list.setPositions(true);
-        methodGen.setMaxLocals();
-        methodGen.setMaxStack();
-        return methodGen.getMethod();
+        return optimisationPerformed ? methodGen.getMethod() : null;
     }
 
-    /**
-     * Puts a constant in the class hashmap if we would store one at runtime. Deletes the constant
-     * from the class hashmap if it is not immediately clear that we are storing a constant
-     */
-    private void updateConstantStore(Instruction maybeConstpush, Instruction maybeStore) {
-        boolean isConstPush = maybeConstpush instanceof ConstantPushInstruction;
-        boolean isStore = maybeStore instanceof StoreInstruction;
-        if (isConstPush && isStore) {
-            int varInd = ((StoreInstruction) maybeStore).getIndex();
-            Number val = ((ConstantPushInstruction) maybeConstpush).getValue();
-            this.varsByIndex.put(varInd, val);
-        } else if (!isConstPush && isStore) {
-            int varInd = ((StoreInstruction) maybeStore).getIndex();
-            this.varsByIndex.remove(varInd);
+    private void updateConstantStore(Instruction current, StoreInstruction next) {
+        int index = next.getIndex();
+        Number value = Util.extractConstant(current, this.constPoolGen);
+        if (value != null) {
+            this.varsByIndex.put(index, value);
+        } else {
+            this.varsByIndex.remove(index);
         }
-    }
-
-    private Instruction getNumberConstantInsertionInstruction(Number val) {
-        if (val instanceof Double) { //Please, dear Java gods, forgive me
-            return new LDC2_W(this.constPoolGen.addDouble(val.doubleValue()));
-        } else if (val instanceof Long) {
-            return new LDC2_W(this.constPoolGen.addLong(val.longValue()));
-        } else if (val instanceof Float) {
-            return new LDC(this.constPoolGen.addFloat(val.floatValue()));
-        } else if (val instanceof Integer) {
-            return new LDC(this.constPoolGen.addInteger(val.intValue()));
-        }
-        return null;
     }
 }

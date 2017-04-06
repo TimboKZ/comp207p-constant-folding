@@ -1,115 +1,60 @@
 package comp207p.main;
 
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.generic.ClassGen;
-import org.apache.bcel.generic.ConstantPoolGen;
-import org.apache.bcel.generic.ConstantPushInstruction;
-import org.apache.bcel.generic.InstructionHandle;
-import org.apache.bcel.generic.InstructionList;
-import org.apache.bcel.generic.InstructionTargeter;
-import org.apache.bcel.generic.LoadInstruction;
-import org.apache.bcel.generic.LocalVariableGen;
-import org.apache.bcel.generic.MethodGen;
-import org.apache.bcel.generic.StoreInstruction;
-import org.apache.bcel.generic.TargetLostException;
+import org.apache.bcel.generic.*;
 import org.apache.bcel.util.InstructionFinder;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Christoph Ulshoefer <christophsulshoefer@gmail.com> 05/04/17.
  */
 public class UnusedVarRemover extends Optimiser {
-    int nops = 0;
 
     public UnusedVarRemover(ClassGen classGen, ConstantPoolGen constPoolGen) {
-        super(classGen, constPoolGen);
+        super(classGen, constPoolGen, DebugStage.Removal);
     }
 
-    @Override
+    /**
+     * Removes a store instruction if it is preceded by a constant push if its index is not used by any other local variable
+     * instructions (i.e. IINC or load). Relevant constant push is also removed.
+     *
+     * @return Optimised method or null if no optimisations could be done
+     */
     protected Method optimiseMethod(Method method, MethodGen methodGen, InstructionList list) {
-        if (this.classGen.getClassName().contains("ConstantVariableFolding")
-                && method.getName().equals("methodThree")) Util.debug = true;
-        Set<Integer> unusedVars;
-        InstructionFinder i = new InstructionFinder(list);
-        try {
-            unusedVars = getIndicesOfConstantStores(i);
-            //Util.debug(unusedVars);
-            removeUsedConstants(unusedVars, i);
-            Iterator<InstructionHandle[]> storeI = i.search("StoreInstruction");
-            for (Integer unusedVarI : unusedVars) {
-                storeI = i.search("StoreInstruction");
-                removeUnusedVarAtIndex(list, storeI, unusedVarI);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        //this.printLocalVars(methodGen);
-        list.setPositions(true);
-        Util.debug("==== After removing unused vars");
-        Util.debug(list);
-        Util.debug = false;
-        return methodGen.getMethod();
-    }
-
-    private void removeUnusedVarAtIndex(InstructionList list, Iterator<InstructionHandle[]> storeI, Integer unusedVarI) {
-        for (Iterator<InstructionHandle[]> it = storeI; it.hasNext(); ) {
-            InstructionHandle[] handles = it.next();
-            InstructionHandle handle = handles[0];
-            if (handle == null || handle.getInstruction() == null) {
-                System.out.println("Handle without instruction: ");
-                continue;
-            }
-            //Util.debug(handle + ", prev: " + handle.getPrev() + ", next: " + handle.getNext());
-            if (((StoreInstruction) handle.getInstruction()).getIndex() == unusedVarI) {
-                InstructionHandle next = handle.getNext();
-                try {
-                    list.delete(handle.getPrev(), handle);
-                } catch (TargetLostException tl) {
-                    for (InstructionHandle target : tl.getTargets()) {
-                        for (InstructionTargeter t : target.getTargeters()) {
-                            if (next == null) {
-                                //do something?
-                            }
-                            t.updateTarget(target, next);
-                        }
-                    }
+        Map<Integer, InstructionHandle> stored = new HashMap<>();
+        boolean optimisationPerformed = false;
+        for (InstructionHandle handle : list.getInstructionHandles()) {
+            if (handle == null) continue;
+            Instruction instruction = handle.getInstruction();
+            if (instruction instanceof StoreInstruction) {
+                StoreInstruction storeInstruction = (StoreInstruction) instruction;
+                int storeIndex = storeInstruction.getIndex();
+                InstructionHandle redundantStore = stored.get(storeIndex);
+                if (redundantStore != null) {
+                    optimisationPerformed = optimisationPerformed || removeStoreInstruction(list, redundantStore);
                 }
-            }
-            // TODO: Really remove the unused vars ._.
-        }
-    }
-
-    private void removeUsedConstants(Set<Integer> unusedVars, InstructionFinder i) {
-        Iterator<InstructionHandle[]> loadI = i.search("LoadInstruction");
-        for (Iterator<InstructionHandle[]> it = loadI; it.hasNext(); ) {
-            InstructionHandle[] handles = it.next();
-            unusedVars.remove(((LoadInstruction) (handles[0].getInstruction())).getIndex());
-        }
-    }
-
-    private Set<Integer> getIndicesOfConstantStores(InstructionFinder i) {
-        Iterator<InstructionHandle[]> storeI = i.search("StoreInstruction");
-        Set<Integer> unusedVars = new HashSet<>();
-        for (Iterator<InstructionHandle[]> it = storeI; it.hasNext(); ) {
-            InstructionHandle[] handles = it.next();
-            InstructionHandle prev = handles[0].getPrev();
-            //Util.debug(prev);
-            if (prev != null && prev.getInstruction() instanceof ConstantPushInstruction) {
-                unusedVars.add(((StoreInstruction) (handles[0].getInstruction())).getIndex());
+                stored.put(storeIndex, handle);
+            } else if (instruction instanceof LocalVariableInstruction) {
+                LocalVariableInstruction localVariableInstruction = (LocalVariableInstruction) instruction;
+                stored.remove(localVariableInstruction.getIndex());
             }
         }
-        return unusedVars;
+        for (InstructionHandle unusedStore : stored.values()) {
+            optimisationPerformed = optimisationPerformed || removeStoreInstruction(list, unusedStore);
+        }
+        return optimisationPerformed ? methodGen.getMethod() : null;
     }
 
-    private void printLocalVars(MethodGen m) {
-        LocalVariableGen[] lv = m.getLocalVariables();
-        Util.debug(lv.length + " local vars");
-        for (int j = 0; j < lv.length; j++) {
-            Util.debug(lv[j].getType() + ", " + m.getMaxLocals());
-            Util.debug(lv[j]);
+    protected boolean removeStoreInstruction(InstructionList list, InstructionHandle handle) {
+        InstructionHandle storedValueHandle = handle.getPrev();
+        if (storedValueHandle == null || Util.isConstantInstruction(storedValueHandle)) {
+            InstructionHandle nextHandle = handle.getNext();
+            attemptDelete(list, storedValueHandle, nextHandle);
+            attemptDelete(list, handle, nextHandle);
+            return true;
+        } else {
+            return false;
         }
     }
 }

@@ -13,22 +13,63 @@ public class Util {
         if (Util.debug) System.out.println(object);
     }
 
+    public static boolean isConstantInstruction(InstructionHandle handle) {
+        return isConstantInstruction(handle.getInstruction());
+    }
+
+    public static boolean isConstantInstruction(Instruction instruction) {
+        if (instruction instanceof LDC) return true;
+        if (instruction instanceof LDC2_W) return true;
+        if (instruction instanceof ConstantPushInstruction) return true;
+        return false;
+    }
+
     public static Number extractConstant(InstructionHandle handle, ConstantPoolGen constPoolGen) {
         return Util.extractConstant(handle.getInstruction(), constPoolGen);
     }
 
     public static Number extractConstant(Instruction instruction, ConstantPoolGen constPoolGen) {
-        if (instruction instanceof LDC) {
-            LDC ldc = (LDC) instruction;
-            Object value = ldc.getValue(constPoolGen);
-            if (value instanceof Number) {
-                return (Number) value;
+        try {
+            if (instruction instanceof LDC) {
+                LDC ldc = (LDC) instruction;
+                Object value = ldc.getValue(constPoolGen);
+                if (value instanceof Number) {
+                    return (Number) value;
+                }
             }
+            if (instruction instanceof LDC2_W) {
+                LDC2_W ldc2_w = (LDC2_W) instruction;
+                if (extractArithmeticType(ldc2_w.getType(constPoolGen)) != ArithmeticType.OTHER) {
+                    return ldc2_w.getValue(constPoolGen);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Could not extract constant!");
+            System.err.println(e.getClass() + e.getMessage());
+            System.err.println();
+            return null;
+        }
+        if (instruction instanceof ConstantPushInstruction) {
+            ConstantPushInstruction push = (ConstantPushInstruction) instruction;
+            return push.getValue();
         }
         return null;
     }
 
-    public static ArithmeticType extractArithemticType(Type type) {
+    public static Instruction getConstantPushInstruction(Number val, ConstantPoolGen constPoolGen) {
+        if (val instanceof Double) {
+            return new LDC2_W(constPoolGen.addDouble(val.doubleValue()));
+        } else if (val instanceof Long) {
+            return new LDC2_W(constPoolGen.addLong(val.longValue()));
+        } else if (val instanceof Float) {
+            return new LDC(constPoolGen.addFloat(val.floatValue()));
+        } else if (val instanceof Integer) {
+            return new LDC(constPoolGen.addInteger(val.intValue()));
+        }
+        return null;
+    }
+
+    public static ArithmeticType extractArithmeticType(Type type) {
         if (type == Type.INT) return ArithmeticType.INT;
         if (type == Type.LONG) return ArithmeticType.LONG;
         if (type == Type.FLOAT) return ArithmeticType.FLOAT;
@@ -63,7 +104,7 @@ public class Util {
         } catch (Exception e) {
             return ArithmeticOperationType.OTHER;
         }
-        switch(type) {
+        switch (type) {
             case IADD:
             case LADD:
             case FADD:
@@ -91,29 +132,6 @@ public class Util {
 
     public static boolean isArithmeticLoadInstruction(Instruction i) {
         return i instanceof LoadInstruction && !(i instanceof ALOAD); //ALOAD = object reference
-    }
-
-    /**
-     * Deletes the next instruction
-     * Try/catch block done as per suggestion in:
-     * https://commons.apache.org/proper/commons-bcel/apidocs/org/apache/bcel/generic/TargetLostException.html
-     * @param list
-     * @param toDelete
-     */
-    public static void deleteInstruction(InstructionList list, InstructionHandle toDelete, InstructionHandle newTarget) {
-        if(toDelete == null) return;
-        try {
-            //System.out.println("deleting: " + toDelete + ", " + newTarget);
-            list.delete(toDelete);
-        } catch(TargetLostException e) {
-            //e.printStackTrace();
-            for (InstructionHandle target : e.getTargets()) {
-                for (InstructionTargeter targeter : target.getTargeters()) {
-                    System.out.println(toDelete + "targeter: " + targeter + ", " + target + ", " + newTarget);
-                    targeter.updateTarget(target, newTarget);
-                }
-            }
-        }
     }
 
 }
