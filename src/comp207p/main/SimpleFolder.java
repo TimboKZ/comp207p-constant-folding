@@ -69,10 +69,10 @@ public class SimpleFolder extends Optimiser {
                 return false;
         }
 
-        list.insert(handle, pushInstruction);
+        InstructionHandle replacementHandle = list.insert(handle, pushInstruction);
 
-        attemptDelete(list, handle);
-        attemptDelete(list, previousHandle);
+        attemptDelete(list, handle, replacementHandle);
+        attemptDelete(list, previousHandle, replacementHandle);
         return true;
     }
 
@@ -95,15 +95,19 @@ public class SimpleFolder extends Optimiser {
         int constIndex = this.performArithmeticOperation(operationType, type, number1, number2);
         if (constIndex == -1) return false;
 
+        Instruction replacementInstruction;
+
         if(type == ArithmeticType.DOUBLE || type == ArithmeticType.LONG) {
-            list.insert(handle, new LDC2_W(constIndex));
+            replacementInstruction = new LDC2_W(constIndex);
         } else {
-            list.insert(handle, new LDC(constIndex));
+            replacementInstruction = new LDC(constIndex);
         }
 
-        attemptDelete(list, handle);
-        attemptDelete(list, handle1);
-        attemptDelete(list, handle2);
+        InstructionHandle replacementHandle = list.insert(handle, replacementInstruction);
+
+        attemptDelete(list, handle, replacementHandle);
+        attemptDelete(list, handle1, replacementHandle);
+        attemptDelete(list, handle2, replacementHandle);
 
         return true;
     }

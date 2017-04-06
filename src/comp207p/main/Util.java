@@ -134,25 +134,4 @@ public class Util {
         return i instanceof LoadInstruction && !(i instanceof ALOAD); //ALOAD = object reference
     }
 
-    /**
-     * Deletes the next instruction
-     * Try/catch block done as per suggestion in:
-     * https://commons.apache.org/proper/commons-bcel/apidocs/org/apache/bcel/generic/TargetLostException.html
-     */
-    public static void deleteInstruction(InstructionList list, InstructionHandle toDelete, InstructionHandle newTarget) {
-        if (toDelete == null) return;
-        try {
-            //System.out.println("deleting: " + toDelete + ", " + newTarget);
-            list.delete(toDelete);
-        } catch (TargetLostException e) {
-            //e.printStackTrace();
-            for (InstructionHandle target : e.getTargets()) {
-                for (InstructionTargeter targeter : target.getTargeters()) {
-                    Util.debug(toDelete + " targeter: " + targeter + ", " + target + ", " + newTarget);
-                    targeter.updateTarget(target, newTarget);
-                }
-            }
-        }
-    }
-
 }

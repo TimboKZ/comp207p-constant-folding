@@ -52,7 +52,7 @@ public class UnusedVarRemover extends Optimiser {
             InstructionHandle[] handles = storeI.next();
             InstructionHandle handle = handles[0];
             if (handle == null || handle.getInstruction() == null) {
-                Util.debug("Handle without instruction: ");
+                Util.debug("Empty handle or instruction!");
                 continue;
             }
             //Util.debug(handle + ", prev: " + handle.getPrev() + ", next: " + handle.getNext());

@@ -50,8 +50,7 @@ public class ConstantPropagator extends Optimiser {
                     Number n = this.varsByIndex.get(loadI);
                     Instruction insert = Util.getConstantPushInstruction(n, constPoolGen);
                     list.append(handle, insert);
-                    //attemptDelete(list, handle);
-                    Util.deleteInstruction(list, handle, handle.getNext());
+                    attemptDelete(list, handle, handle.getNext());
                 }
             }
         }

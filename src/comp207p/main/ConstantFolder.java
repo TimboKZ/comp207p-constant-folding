@@ -26,6 +26,7 @@ public class ConstantFolder {
     JavaClass optimized = null;
 
     public static List<String> ignoreClasses = new ArrayList<>();
+    public static List<String> ignoreMethods = new ArrayList<>();
 
     public static List<DebugStage> debugStages = new ArrayList<>();
     public static List<String> debugClasses = new ArrayList<>();
@@ -44,11 +45,14 @@ public class ConstantFolder {
 
             // Choose which classes to ignore
             ignoreClasses.add("DynamicVariableFolding");
+            ignoreMethods.add("methodFour");
 
             // Choose which stages/classes/methods you want to debug:
             debugStages.add(DebugStage.Folding);
-            debugClasses.add("ConstantVariableFolding");
-            debugMethods.add("methodTwo");
+            debugStages.add(DebugStage.Propagation);
+            debugStages.add(DebugStage.Removal);
+            debugClasses.add("DynamicVariableFolding");
+            debugMethods.add("methodFour");
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -25,13 +25,14 @@ public abstract class Optimiser {
         InstructionList list = methodGen.getInstructionList();
         String className = this.classGen.getClassName();
         String shortClass = className.substring(className.lastIndexOf('.') + 1).trim();
+        String methodName = method.getName();
 
-        if (ConstantFolder.ignoreClasses.contains(className)
-                || ConstantFolder.ignoreClasses.contains(shortClass)) {
+        if ((ConstantFolder.ignoreClasses.contains(className)
+                || ConstantFolder.ignoreClasses.contains(shortClass))
+                && ConstantFolder.ignoreMethods.contains(methodName)) {
             return method;
         }
 
-        String methodName = method.getName();
         debugString = shortClass + " --> " + methodName + "() " + this.stage;
         String iterationString = "(it " + iteration + ")";
         Util.debug = ConstantFolder.debugStages.contains(stage)
@@ -53,13 +54,25 @@ public abstract class Optimiser {
     }
 
     protected void attemptDelete(InstructionList list, InstructionHandle handle) {
+        attemptDelete(list, handle, null);
+    }
+
+    protected void attemptDelete(InstructionList list, InstructionHandle handle, InstructionHandle replacement) {
         if (handle == null) return;
         try {
             list.delete(handle);
-        } catch (Exception e) {
-            System.err.println("Error: (" + debugString + ")");
-            System.err.println(e.getClass() + e.getMessage());
-            System.err.println();
+        } catch (TargetLostException e) {
+            if(replacement != null) {
+                for (InstructionHandle target : e.getTargets()) {
+                    for (InstructionTargeter targeter : target.getTargeters()) {
+                        targeter.updateTarget(target, replacement);
+                    }
+                }
+            } else {
+                System.err.println("Error: (" + debugString + ")");
+                System.err.println(e.getClass() + e.getMessage());
+                System.err.println();
+            }
         }
     }
 
