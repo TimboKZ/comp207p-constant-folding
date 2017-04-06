@@ -21,18 +21,18 @@ public class ConstantPropagator extends Optimiser {
     }
 
     /**
-     * Replaces variables with constants
-     * TODO delete variable store if unnecessary
+     * If load instruction is not referenced by goto commands, replaces it with a constant push.
+     * Otherwise appends constant push after load and re-targets all non-goto commands to the new constant push.
      *
-     * @return The optimised method
+     * @return Optimised method or null if no optimisations could be done
      */
     protected Method optimiseMethod(
             Method method,
             MethodGen methodGen,
             InstructionList list
     ) {
+        boolean optimisationPerformed = false;
         this.varsByIndex = new HashMap<>();
-        outer:
         for (InstructionHandle handle : list.getInstructionHandles()) {
             Instruction instruction = handle.getInstruction();
             InstructionHandle nextHandle = handle.getNext();
@@ -54,6 +54,7 @@ public class ConstantPropagator extends Optimiser {
                     LoadInstruction load = (LoadInstruction) instruction;
                     int index = load.getIndex();
                     if (this.varsByIndex.containsKey(index)) {
+                        optimisationPerformed = true;
                         Number value = this.varsByIndex.get(index);
                         Instruction insert = Util.getConstantPushInstruction(value, constPoolGen);
                         InstructionHandle newHandle = list.append(handle, insert);
@@ -71,7 +72,7 @@ public class ConstantPropagator extends Optimiser {
             }
         }
         list.setPositions(true);
-        return methodGen.getMethod();
+        return optimisationPerformed ? methodGen.getMethod() : null;
     }
 
     private void updateConstantStore(Instruction current, StoreInstruction next) {

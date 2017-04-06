@@ -15,37 +15,46 @@ public class UnusedVarRemover extends Optimiser {
         super(classGen, constPoolGen, DebugStage.Removal);
     }
 
+    /**
+     * Removes a store instruction if it is preceded by a constant push if its index is not used by any other local variable
+     * instructions (i.e. IINC or load). Relevant constant push is also removed.
+     *
+     * @return Optimised method or null if no optimisations could be done
+     */
     protected Method optimiseMethod(Method method, MethodGen methodGen, InstructionList list) {
         Map<Integer, InstructionHandle> stored = new HashMap<>();
+        boolean optimisationPerformed = false;
         for (InstructionHandle handle : list.getInstructionHandles()) {
-            if(handle == null) continue;
+            if (handle == null) continue;
             Instruction instruction = handle.getInstruction();
             if (instruction instanceof StoreInstruction) {
                 StoreInstruction storeInstruction = (StoreInstruction) instruction;
                 int storeIndex = storeInstruction.getIndex();
                 InstructionHandle redundantStore = stored.get(storeIndex);
                 if (redundantStore != null) {
-                    removeStoreInstruction(list, redundantStore);
+                    optimisationPerformed = optimisationPerformed || removeStoreInstruction(list, redundantStore);
                 }
                 stored.put(storeIndex, handle);
-            } else if(instruction instanceof LocalVariableInstruction) {
+            } else if (instruction instanceof LocalVariableInstruction) {
                 LocalVariableInstruction localVariableInstruction = (LocalVariableInstruction) instruction;
                 stored.remove(localVariableInstruction.getIndex());
             }
         }
-        for(InstructionHandle unusedStore : stored.values()) {
-            removeStoreInstruction(list, unusedStore);
+        for (InstructionHandle unusedStore : stored.values()) {
+            optimisationPerformed = optimisationPerformed || removeStoreInstruction(list, unusedStore);
         }
-        list.setPositions(true);
-        return methodGen.getMethod();
+        return optimisationPerformed ? methodGen.getMethod() : null;
     }
 
-    protected void removeStoreInstruction(InstructionList list, InstructionHandle handle) {
+    protected boolean removeStoreInstruction(InstructionList list, InstructionHandle handle) {
         InstructionHandle storedValueHandle = handle.getPrev();
         if (storedValueHandle == null || Util.isConstantInstruction(storedValueHandle)) {
             InstructionHandle nextHandle = handle.getNext();
             attemptDelete(list, storedValueHandle, nextHandle);
             attemptDelete(list, handle, nextHandle);
+            return true;
+        } else {
+            return false;
         }
     }
 }

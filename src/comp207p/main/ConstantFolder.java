@@ -18,9 +18,7 @@ public class ConstantFolder {
     ClassParser parser = null;
     ClassGen classGen = null;
     ConstantPoolGen constPoolGen = null;
-    SimpleFolder folder = null;
-    ConstantPropagator propagator = null;
-    UnusedVarRemover remover = null;
+    private Optimiser[] optimisers = null;
 
     JavaClass original = null;
     JavaClass optimized = null;
@@ -39,9 +37,11 @@ public class ConstantFolder {
             this.original = parser.parse();
             this.classGen = new ClassGen(original);
             this.constPoolGen = classGen.getConstantPool();
-            this.folder = new SimpleFolder(classGen, constPoolGen);
-            this.propagator = new ConstantPropagator(classGen, constPoolGen);
-            this.remover = new UnusedVarRemover(classGen, constPoolGen);
+            this.optimisers = new Optimiser[]{
+                    new SimpleFolder(classGen, constPoolGen),
+                    new ConstantPropagator(classGen, constPoolGen),
+                    new UnusedVarRemover(classGen, constPoolGen)
+            };
 
             // Choose which classes/methods to ignore (uses AND, *not* OR)
             ignoreClasses.add("DynamicVariableFolding");
@@ -64,18 +64,28 @@ public class ConstantFolder {
         optimized = classGen.getJavaClass();
     }
 
+    /**
+     * Applies optimisers from `optimisers` array until no changes occur
+     */
     public void optimizeMethods(Method[] methods) {
-        for (Method method : methods) {
-            Method optimisedMethod = method;
-            Code code = optimisedMethod.getCode();
+        for (Method originalMethod : methods) {
+            Method method = originalMethod;
+            Code code = method.getCode();
             if (code == null) continue;
-            int maxInstructionCount = new InstructionList(code.getCode()).getLength();
-            for (int iteration = 0; iteration < maxInstructionCount; iteration++) {
-                optimisedMethod = folder.optimiseMethod(optimisedMethod, iteration);
-                optimisedMethod = propagator.optimiseMethod(optimisedMethod, iteration);
-                optimisedMethod = remover.optimiseMethod(optimisedMethod, iteration);
+            int iteration = 1;
+            boolean optimisationPerformed = true;
+            while (optimisationPerformed) {
+                optimisationPerformed = false;
+                for (Optimiser optimiser : this.optimisers) {
+                    Method optimisedMethod = optimiser.optimiseMethod(method, iteration);
+                    if (optimisedMethod != null) {
+                        optimisationPerformed = true;
+                        method = optimisedMethod;
+                    }
+                }
+                iteration++;
             }
-            classGen.replaceMethod(method, optimisedMethod);
+            classGen.replaceMethod(originalMethod, method);
         }
     }
 

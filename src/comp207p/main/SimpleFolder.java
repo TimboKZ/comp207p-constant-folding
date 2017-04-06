@@ -13,25 +13,26 @@ public class SimpleFolder extends Optimiser {
     }
 
     /**
-     * Traverses the method, tries to evaluate as many instructions as possible
+     * Replaces arithmetic instructions with constants and converts constants (e.g. casting) where possible
      *
-     * @return The optimised method
+     * @return Optimised method or null if no optimisations could be done
      */
     protected Method optimiseMethod(
             Method method,
             MethodGen methodGen,
             InstructionList list
     ) {
+        boolean optimisationPerformed = false;
         for (InstructionHandle handle : list.getInstructionHandles()) {
             if (handle == null) continue;
             Instruction instruction = handle.getInstruction();
             if (instruction instanceof ConversionInstruction) {
-                this.handleConversion(list, handle);
+                optimisationPerformed = optimisationPerformed || this.handleConversion(list, handle);
             } else if (instruction instanceof ArithmeticInstruction) {
-                this.handleArithmeticInstruction(list, handle);
+                optimisationPerformed = optimisationPerformed || this.handleArithmeticInstruction(list, handle);
             }
         }
-        return methodGen.getMethod();
+        return optimisationPerformed ? methodGen.getMethod() : null;
     }
 
     /**
