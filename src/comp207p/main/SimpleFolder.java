@@ -1,7 +1,16 @@
 package comp207p.main;
 
 import org.apache.bcel.classfile.Method;
-import org.apache.bcel.generic.*;
+import org.apache.bcel.generic.ArithmeticInstruction;
+import org.apache.bcel.generic.ClassGen;
+import org.apache.bcel.generic.ConstantPoolGen;
+import org.apache.bcel.generic.ConversionInstruction;
+import org.apache.bcel.generic.Instruction;
+import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.InstructionList;
+import org.apache.bcel.generic.LDC;
+import org.apache.bcel.generic.LDC2_W;
+import org.apache.bcel.generic.MethodGen;
 
 /**
  * @author Timur Kuzhagaliyev
@@ -13,7 +22,8 @@ public class SimpleFolder extends Optimiser {
     }
 
     /**
-     * Replaces arithmetic instructions with constants and converts constants (e.g. casting) where possible
+     * Replaces arithmetic instructions with constants and converts constants (e.g. casting) where
+     * possible
      *
      * @return Optimised method or null if no optimisations could be done
      */
@@ -48,7 +58,7 @@ public class SimpleFolder extends Optimiser {
         if (value == null) return false;
 
         Instruction pushInstruction;
-        switch(type) {
+        switch (type) {
             case INT:
                 pushInstruction = Util.getConstantPushInstruction(value.intValue(), constPoolGen);
                 break;
@@ -92,7 +102,7 @@ public class SimpleFolder extends Optimiser {
 
         Instruction replacementInstruction;
 
-        if(type == ArithmeticType.DOUBLE || type == ArithmeticType.LONG) {
+        if (type == ArithmeticType.DOUBLE || type == ArithmeticType.LONG) {
             replacementInstruction = new LDC2_W(constIndex);
         } else {
             replacementInstruction = new LDC(constIndex);

@@ -130,6 +130,68 @@ public class Util {
         }
     }
 
+    public enum IfInstructionHack {
+        IF_ACMPEQ,
+        IF_ACMPNE,
+        IF_ICMPEQ,
+        IF_ICMPGE,
+        IF_ICMPGT,
+        IF_ICMPLE,
+        IF_ICMPLT,
+        IF_ICMPNE,
+        IFEQ,
+        IFGE,
+        IFGT,
+        IFLE,
+        IFLT,
+        IFNE,
+        IFNONNULL,
+        IFNULL
+    }
+
+
+    public static ComparisonType extractComparisonType(IfInstruction instruction) {
+        String className = instruction.getClass().getSimpleName();
+        IfInstructionHack type;
+        try {
+            type = IfInstructionHack.valueOf(className);
+        } catch (Exception e) {
+            return ComparisonType.OTHER;
+        }
+        switch (type) {
+            case IF_ACMPEQ:
+            case IF_ICMPEQ:
+                return ComparisonType.EQUAL;
+            case IF_ACMPNE:
+            case IF_ICMPNE:
+                return ComparisonType.NOT_EQUAL;
+            case IF_ICMPGE:
+                return ComparisonType.GREATER_EQUAL;
+            case IF_ICMPGT:
+                return ComparisonType.GREATER;
+            case IF_ICMPLE:
+                return ComparisonType.LESS_EQUAL;
+            case IF_ICMPLT:
+                return ComparisonType.LESS;
+            case IFEQ:
+                return ComparisonType.EQUAL_ZERO;
+            case IFNE:
+                return ComparisonType.NOT_EQUAL_ZERO;
+            case IFGT:
+                return ComparisonType.GREATER_ZERO;
+            case IFLE:
+                return ComparisonType.LESS_EQUAL_ZERO;
+            case IFLT:
+                return ComparisonType.LESS_ZERO;
+            case IFGE:
+                return ComparisonType.GREATER_EQUAL_ZERO;
+            case IFNONNULL:
+            case IFNULL:
+            default:
+                return ComparisonType.OTHER;
+        }
+    }
+
     public static boolean isArithmeticLoadInstruction(Instruction i) {
         return i instanceof LoadInstruction && !(i instanceof ALOAD); //ALOAD = object reference
     }

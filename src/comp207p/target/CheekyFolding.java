@@ -69,4 +69,43 @@ public class CheekyFolding {
         }
         return c;
     }
+
+    public boolean methodEight(int a) {
+        return 3 + 4 > 7 + 8 + a;
+    }
+
+    public int methodNine() {
+        boolean some = 3 + 3 > 3 + 3;
+        String a = "Random crap";
+        if(some) {
+            int s = 3 + 2;
+            System.out.println(s);
+        } else {
+            System.out.println("Random print statement FALSE");
+            System.out.println("Random print statement FALSE2");
+        }
+        return 3 + 4;
+    }
+
+    public long methodTen() {
+        return 3 % 2 + 53 % 7 + 345555555512315L % 1231231231L;
+    }
+
+    public int methodEleven() {
+        return 4 << (13 | 14);
+    }
+
+    public int methodTwelve() {
+        int superComplicatedThing = 13 + 17 + 21 * 3;
+        switch(superComplicatedThing) {
+            case 93:
+                superComplicatedThing = superComplicatedThing * 2; //correct
+                break;
+            case 90:
+                return -1;
+            default:
+                return -1;
+        }
+        return superComplicatedThing; //186
+    }
 }

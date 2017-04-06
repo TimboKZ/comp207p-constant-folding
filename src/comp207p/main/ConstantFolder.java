@@ -48,8 +48,8 @@ public class ConstantFolder {
 
             // Choose which stages/classes/methods to print debug output for (uses AND, *not* OR)
             debugStages.add(DebugStage.Propagation);
-            debugClasses.add("CheekyFolding");
-            debugMethods.add("methodOne");
+            debugClasses.add("ConstantVariableFolding");
+            debugMethods.add("methodThree");
         } catch (IOException e) {
             e.printStackTrace();
         }
