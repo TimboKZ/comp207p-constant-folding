@@ -5,12 +5,16 @@ import org.apache.bcel.generic.ArithmeticInstruction;
 import org.apache.bcel.generic.ClassGen;
 import org.apache.bcel.generic.ConstantPoolGen;
 import org.apache.bcel.generic.ConversionInstruction;
+import org.apache.bcel.generic.GotoInstruction;
+import org.apache.bcel.generic.IfInstruction;
 import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.LDC;
 import org.apache.bcel.generic.LDC2_W;
 import org.apache.bcel.generic.MethodGen;
+import org.apache.bcel.generic.Type;
+import org.apache.bcel.generic.TypedInstruction;
 
 /**
  * @author Timur Kuzhagaliyev
@@ -40,6 +44,8 @@ public class SimpleFolder extends Optimiser {
                 optimisationPerformed = optimisationPerformed || this.handleConversion(list, handle);
             } else if (instruction instanceof ArithmeticInstruction) {
                 optimisationPerformed = optimisationPerformed || this.handleArithmeticInstruction(list, handle);
+            } else if (instruction instanceof IfInstruction) {
+                optimisationPerformed = optimisationPerformed || this.handleIfInstruction(list, handle);
             }
         }
         return optimisationPerformed ? methodGen.getMethod() : null;
@@ -227,4 +233,59 @@ public class SimpleFolder extends Optimiser {
         return index;
     }
 
+    private boolean handleIfInstruction(InstructionList list, InstructionHandle handle) {
+        IfInstruction instruction = (IfInstruction) handle.getInstruction();
+        ComparisonType cmpType = Util.extractComparisonType(instruction);
+        if (cmpType == ComparisonType.OTHER) return false;
+
+        InstructionHandle handle1 = handle.getPrev();
+        InstructionHandle handle2 = handle1.getPrev();
+        Number number1 = Util.extractConstant(handle1, constPoolGen);
+        if (number1 == null) return false;
+        Type numType1 = ((TypedInstruction) handle1.getInstruction()).getType(constPoolGen);
+        Type numType2;
+        Number number2 = null;
+        if (Comparer.isZeroComparison(cmpType)) {
+            numType2 = null;
+        } else {
+            if (handle2 == null) {
+                return false;
+            } else {
+                number2 = Util.extractConstant(handle2, constPoolGen);
+                numType2 = ((TypedInstruction) handle2.getInstruction()).getType(constPoolGen);
+                if(number2 == null) {
+                    return false;
+                }
+            }
+        }
+        try {
+            boolean res = Comparer.performComparison(cmpType, numType1, numType2, number1, number2);
+            InstructionHandle jumpTarget = instruction.getTarget();
+            InstructionHandle elseJump = jumpTarget.getPrev();
+            InstructionHandle replacementHandle;
+            if (res) { //delete first branch, since we are jumping
+                //delete if, delete everything from and including goto to and excluding the point we would have jumped to
+                replacementHandle = handle.getNext();
+                try {
+                    InstructionHandle elseDone = ((GotoInstruction) elseJump.getInstruction()).getTarget();
+                    attemptDelete(list, handle, replacementHandle);
+                    attemptDelete(list, elseJump, elseDone.getPrev(), replacementHandle);
+                } catch (ClassCastException e) {
+                    return false; //format does not work out --> abandon
+                }
+            } else {
+                //look for goto, then delete everything from and including if to goto and including
+                attemptDelete(list, handle, elseJump, jumpTarget);
+                replacementHandle = jumpTarget;
+            }
+            attemptDelete(list, handle1, replacementHandle);
+            if (number2 != null) {
+                attemptDelete(list, handle2, replacementHandle);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
