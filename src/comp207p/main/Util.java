@@ -2,6 +2,8 @@ package comp207p.main;
 
 import org.apache.bcel.generic.*;
 
+import static comp207p.main.ComparisonType.*;
+
 /**
  * @author Timur Kuzhagaliyev
  */
@@ -156,39 +158,66 @@ public class Util {
         try {
             type = IfInstructionHack.valueOf(className);
         } catch (Exception e) {
-            return ComparisonType.OTHER;
+            return OTHER;
         }
         switch (type) {
             case IF_ACMPEQ:
             case IF_ICMPEQ:
-                return ComparisonType.EQUAL;
+                return EQUAL;
             case IF_ACMPNE:
             case IF_ICMPNE:
-                return ComparisonType.NOT_EQUAL;
+                return NOT_EQUAL;
             case IF_ICMPGE:
-                return ComparisonType.GREATER_EQUAL;
+                return GREATER_EQUAL;
             case IF_ICMPGT:
-                return ComparisonType.GREATER;
+                return GREATER;
             case IF_ICMPLE:
-                return ComparisonType.LESS_EQUAL;
+                return LESS_EQUAL;
             case IF_ICMPLT:
-                return ComparisonType.LESS;
+                return LESS;
             case IFEQ:
-                return ComparisonType.EQUAL_ZERO;
+                return EQUAL_ZERO;
             case IFNE:
-                return ComparisonType.NOT_EQUAL_ZERO;
+                return NOT_EQUAL_ZERO;
             case IFGT:
-                return ComparisonType.GREATER_ZERO;
+                return GREATER_ZERO;
             case IFLE:
-                return ComparisonType.LESS_EQUAL_ZERO;
+                return LESS_EQUAL_ZERO;
             case IFLT:
-                return ComparisonType.LESS_ZERO;
+                return LESS_ZERO;
             case IFGE:
-                return ComparisonType.GREATER_EQUAL_ZERO;
+                return GREATER_EQUAL_ZERO;
             case IFNONNULL:
             case IFNULL:
             default:
-                return ComparisonType.OTHER;
+                return OTHER;
+        }
+    }
+
+    /**
+     * Interestingly enough, comparisons with zero get the same bytecode instruction as an evaluation
+     * after a comparison of longs/floats/doubles.
+     * In the rare case that e.g. LCMP gets used, Comparer has to use another comparison.
+     * This function is a dirty hack to fix that issue
+     * @param cmpType
+     * @return
+     */
+    public static ComparisonType adjustCmpTypeBecauseItsSpecial(ComparisonType cmpType) {
+        switch(cmpType) {
+            case EQUAL_ZERO:
+                return EQUAL;
+            case NOT_EQUAL_ZERO:
+                return NOT_EQUAL;
+            case GREATER_ZERO:
+                return GREATER;
+            case LESS_EQUAL_ZERO:
+                return LESS_EQUAL;
+            case LESS_ZERO:
+                return LESS;
+            case GREATER_EQUAL_ZERO:
+                return GREATER_EQUAL;
+            default:
+                return cmpType;
         }
     }
 

@@ -5,11 +5,16 @@ import org.apache.bcel.generic.ArithmeticInstruction;
 import org.apache.bcel.generic.ClassGen;
 import org.apache.bcel.generic.ConstantPoolGen;
 import org.apache.bcel.generic.ConversionInstruction;
+import org.apache.bcel.generic.DCMPG;
+import org.apache.bcel.generic.DCMPL;
+import org.apache.bcel.generic.FCMPG;
+import org.apache.bcel.generic.FCMPL;
 import org.apache.bcel.generic.GotoInstruction;
 import org.apache.bcel.generic.IfInstruction;
 import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionList;
+import org.apache.bcel.generic.LCMP;
 import org.apache.bcel.generic.LDC;
 import org.apache.bcel.generic.LDC2_W;
 import org.apache.bcel.generic.MethodGen;
@@ -237,22 +242,39 @@ public class SimpleFolder extends Optimiser {
         IfInstruction instruction = (IfInstruction) handle.getInstruction();
         ComparisonType cmpType = Util.extractComparisonType(instruction);
         if (cmpType == ComparisonType.OTHER) return false;
-
+        Type numType1 = null;
+        Type numType2 = null;
         InstructionHandle handle1 = handle.getPrev();
+        boolean isOfOtherType = isComparisonOfOtherType(handle1.getInstruction());
+        if(isOfOtherType) {
+            cmpType = Util.adjustCmpTypeBecauseItsSpecial(cmpType);
+            if(handle1.getInstruction() instanceof LCMP) {
+                numType1 = Type.LONG;
+                numType2 = Type.LONG;
+            } else if (handle1.getInstruction() instanceof DCMPL
+                    || handle1.getInstruction() instanceof DCMPG) {
+                numType1 = Type.DOUBLE;
+                numType2 = Type.DOUBLE;
+            } else if (handle1.getInstruction() instanceof FCMPG
+                    || handle1.getInstruction() instanceof FCMPL) {
+                numType1 = Type.FLOAT;
+                numType2 = Type.FLOAT;
+            }
+            handle1 = handle1.getPrev();
+        }
         InstructionHandle handle2 = handle1.getPrev();
         Number number1 = Util.extractConstant(handle1, constPoolGen);
         if (number1 == null) return false;
-        Type numType1 = ((TypedInstruction) handle1.getInstruction()).getType(constPoolGen);
-        Type numType2;
+        numType1 = numType1 != null ? numType1 : ((TypedInstruction) handle1.getInstruction()).getType(constPoolGen);
         Number number2 = null;
-        if (Comparer.isZeroComparison(cmpType)) {
+        if (Comparer.isZeroComparison(cmpType) && !isOfOtherType) {
             numType2 = null;
         } else {
             if (handle2 == null) {
                 return false;
             } else {
                 number2 = Util.extractConstant(handle2, constPoolGen);
-                numType2 = ((TypedInstruction) handle2.getInstruction()).getType(constPoolGen);
+                numType2 = numType2 != null ? numType2 : ((TypedInstruction) handle2.getInstruction()).getType(constPoolGen);
                 if(number2 == null) {
                     return false;
                 }
@@ -260,6 +282,7 @@ public class SimpleFolder extends Optimiser {
         }
         try {
             boolean res = Comparer.performComparison(cmpType, numType1, numType2, number1, number2);
+            InstructionHandle maybeUnusualComparisonHandle = handle.getPrev();
             InstructionHandle jumpTarget = instruction.getTarget();
             InstructionHandle elseJump = jumpTarget.getPrev();
             InstructionHandle replacementHandle;
@@ -278,8 +301,11 @@ public class SimpleFolder extends Optimiser {
                 attemptDelete(list, handle, elseJump, jumpTarget);
                 replacementHandle = jumpTarget;
             }
+            if (isOfOtherType) {
+                attemptDelete(list, maybeUnusualComparisonHandle, replacementHandle);
+            }
             attemptDelete(list, handle1, replacementHandle);
-            if (number2 != null) {
+            if (!Comparer.isZeroComparison(cmpType) || isOfOtherType) {
                 attemptDelete(list, handle2, replacementHandle);
             }
             return true;
@@ -287,5 +313,13 @@ public class SimpleFolder extends Optimiser {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private boolean isComparisonOfOtherType(Instruction instruction) {
+        return instruction instanceof DCMPG
+                || instruction instanceof DCMPL
+                || instruction instanceof FCMPG
+                || instruction instanceof FCMPL
+                || instruction instanceof LCMP;
     }
 }
